@@ -1,0 +1,22 @@
+services:
+  db-order-service:
+    image: mysql:8
+    container_name: db-order-service
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: orders
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_order_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-hmysql", "-pmysql"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_order_data:
