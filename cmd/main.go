@@ -5,6 +5,7 @@ import (
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/config"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/handler"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/models"
+	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/rabbitmq"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/repository"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/routes"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/service"
@@ -26,9 +27,11 @@ func main() {
 	config.DB.AutoMigrate(&models.Order{})
 
 	cache := cache.NewRedisCache("localhost:6379")
+	rmq := rabbitmq.NewRabbitMQPublisher("amqp://guest:guest@localhost:5672")
+	defer rmq.Close()
 
 	orderRepo := repository.NewOrderRepository(config.DB)
-	orderService := service.NewOrderService(orderRepo, cache)
+	orderService := service.NewOrderService(orderRepo, cache, rmq)
 	orderHandler := handler.NewOrderHandler(orderService)
 
 	r := gin.Default()

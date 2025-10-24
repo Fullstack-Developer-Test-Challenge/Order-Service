@@ -7,6 +7,7 @@ import (
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/client"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/dto"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/models"
+	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/rabbitmq"
 	"github.com/Fullstack-Developer-Test-Challenge/Order-Service/internal/repository"
 )
 
@@ -16,16 +17,20 @@ type OrderService interface {
 }
 
 type orderService struct {
-	repo  repository.OrderRepository
-	cache *cache.RedisCache
+	repo      repository.OrderRepository
+	cache     *cache.RedisCache
+	publisher *rabbitmq.RabbitMQPublisher
 }
 
-func NewOrderService(repo repository.OrderRepository, cache *cache.RedisCache) OrderService {
-	return &orderService{repo, cache}
+func NewOrderService(
+	repo repository.OrderRepository,
+	cache *cache.RedisCache,
+	publisher *rabbitmq.RabbitMQPublisher,
+) OrderService {
+	return &orderService{repo, cache, publisher}
 }
 
 func (s *orderService) CreateOrder(req dto.CreateOrderRequest) (dto.CreateOrderResponse, error) {
-	// validasi product
 	_, err := client.GetByProductID(req.ProductID)
 	if err != nil {
 		return dto.CreateOrderResponse{}, err
@@ -40,6 +45,9 @@ func (s *orderService) CreateOrder(req dto.CreateOrderRequest) (dto.CreateOrderR
 	if err := s.repo.CreateOrder(&order); err != nil {
 		return dto.CreateOrderResponse{}, err
 	}
+
+	s.publisher.PublishOrderCreated(req.ProductID, 1)
+
 	return dto.CreateOrderResponse{
 		ID:         order.ID,
 		ProductID:  order.ID,
